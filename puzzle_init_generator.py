@@ -5,13 +5,16 @@ from turtle import distance
 from typing import List
 import numpy as np
 
+from node import TwoDimPuzzleNode
+
 
 # この手のパズルは完全ランダムだと不可能な構造があるので、それを避けて初期値を生成する
+# 参考: https://manabitimes.jp/math/979
 class PuzzleInitGenerator:
     def __init__(self):
         pass
 
-    def generate(self, goal: List[List[int]]) -> List[List[int]]:
+    def random_generate(self, goal: List[List[int]]) -> List[List[int]]:
         size = len(goal)
         flatten_goal = np.array(goal).flatten()
         while(True):
@@ -57,6 +60,26 @@ class PuzzleInitGenerator:
                 break
         return result
 
+    def count_generate(self, count: int, goal: List[List[int]]) -> List[List[int]]:
+        nodes = []
+        parent_node = TwoDimPuzzleNode(goal, goal, None)
+        nodes.append(parent_node)
+        for _ in range(count):
+            children_node = parent_node.generate_child_node()
+            random.shuffle(children_node)
+            for child_node in children_node:
+                for node in nodes:
+                    if node.equal(child_node):
+                        break
+                else:
+                    nodes.append(child_node)
+                    parent_node = child_node
+                    break
+            else:
+                nodes.pop()
+                parent_node = nodes[-1]
+        return parent_node.tiles
+
 
 def main():
     goal_tiles = [
@@ -65,7 +88,8 @@ def main():
         [7, 6, 5],
     ]
     generator = PuzzleInitGenerator()
-    pprint(generator.generate(goal_tiles))
+    for _ in range(10):
+        pprint(generator.count_generate(40, goal_tiles))
 
 
 if __name__ == '__main__':

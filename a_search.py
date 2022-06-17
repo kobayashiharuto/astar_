@@ -1,70 +1,74 @@
 from itertools import count
 from pprint import pprint
-from typing import List
+from time import time
+from typing import List, Tuple
+
+import numpy as np
 from node import INode
 
 
 class AStarSearcher:
     def __init__(self, init_node: INode):
         # step1: 出発のノードをOpenリストに追加
-        self.open_list: List[INode] = [init_node]
-        self.closed_list: List[INode] = []
+        self.init_node = init_node
+        # ※ dictを使っているのは、同一ノード検索の効率化のため。
+        self.open_list: dict[int, INode] = {init_node.unique_key(): init_node}
+        self.closed_list: dict[int, INode] = {}
+        self.open_list_cost: dict[int, INode] = {
+            init_node.unique_key(): init_node.cost()}
 
-    def search(self) -> INode:
+    def search(self) -> Tuple[int, INode]:
         count = 0
         print('次の初期設定からスタートします')
-        self.open_list[0].print_status()
+        self.init_node.print_status()
         while(True):
             count += 1
-            # step2: Openリストから経路コストg+予想経路コストhが最小の要素をひとつ選択する
+            # step2: Openリストからコストが最小の要素をひとつ選択する
             if len(self.open_list) == 0:
                 return None
-            min_node = min(
-                self.open_list, key=lambda x: x.h_cost() + x.g_cost())
+            open_list_cost_val = list(self.open_list_cost.values())
+            open_list_cost_key = list(self.open_list_cost.keys())
+            min_index = np.array(open_list_cost_val).argmin()
+            min_node = self.open_list[open_list_cost_key[min_index]]
             if min_node.goal_check():
                 print(f'{count}回目に見つかりました')
-                return min_node
-            self.open_list.remove(min_node)
-            # min_node.print_status()
+                return (count, min_node)
+            self.open_remove(min_node)
 
             # step3: ノードを展開して子ノードの集合を作る。min_nodeをCLOSEDリストに追加する。
             min_node_children = min_node.generate_child_node()
-            self.closed_list.append(min_node)
+            self.closed_list[min_node.unique_key()] = min_node
 
             # step4: cloedリストに含まれないノードに対してOpenリストに追加する
             # CLOSEDリストに既に含まれている/含まれていないnew_nodeのリストを作成する
-            already_closed_list_included_new_nodes: List[INode] = []
             not_already_closed_list_included_new_nodes: List[INode] = []
             for min_node_child in min_node_children:
-                for closed_node in self.closed_list:
-                    if closed_node.equal(min_node_child):
-                        already_closed_list_included_new_nodes.append(
-                            min_node_child)
-                        break
+                closed_node = self.closed_list.get(min_node_child.unique_key())
+                # すでにClosedリストに同じステータスのものが入っていたら、経路コストを比較し低い方を採用する
+                if closed_node != None:
+                    if min_node_child.cost() < closed_node.cost():
+                        del self.closed_list[closed_node.unique_key()]
+                        self.open_add(new_node)
                 else:
                     not_already_closed_list_included_new_nodes.append(
                         min_node_child)
 
             # CLOSEDリストに含まれていないnew_nodeの場合
-            for not_already_closed_new_node in not_already_closed_list_included_new_nodes:
-                status_equal_node = [
-                    open_node for open_node in self.open_list if open_node.equal(not_already_closed_new_node)]
+            for new_node in not_already_closed_list_included_new_nodes:
+                open_node = self.open_list.get(new_node.unique_key())
                 # Openリストに同じステータスのものが入っていたら、経路コストを比較し低い方を採用する
-                if len(status_equal_node) == 1:
-                    status_equal_node = status_equal_node[0]
-                    if not_already_closed_new_node.g_cost() < status_equal_node.g_cost():
-                        self.open_list.remove(status_equal_node)
-                        self.open_list.append(not_already_closed_new_node)
+                if open_node != None:
+                    if new_node.cost() < open_node.cost():
+                        self.open_remove(open_node)
+                        self.open_add(new_node)
                 # Openリストに同じステータスのものが入っていなければ、Openリストに追加する
                 else:
-                    self.open_list.append(not_already_closed_new_node)
+                    self.open_add(new_node)
 
-            # すでにClosedリストに同じステータスのものが入っていたら、経路コストを比較し低い方を採用する
-            for already_closed_new_node in already_closed_list_included_new_nodes:
-                status_equal_node = [
-                    open_node for open_node in self.closed_list if open_node.equal(already_closed_new_node)]
-                if len(status_equal_node) == 1:
-                    status_equal_node = status_equal_node[0]
-                    if already_closed_new_node.g_cost() < status_equal_node.g_cost():
-                        self.closed_list.remove(status_equal_node)
-                        self.open_list.append(already_closed_new_node)
+    def open_add(self, new_node: INode):
+        self.open_list[new_node.unique_key()] = new_node
+        self.open_list_cost[new_node.unique_key()] = new_node.cost()
+
+    def open_remove(self, remove_node: INode):
+        del self.open_list[remove_node.unique_key()]
+        del self.open_list_cost[remove_node.unique_key()]
