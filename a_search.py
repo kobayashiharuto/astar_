@@ -1,9 +1,11 @@
 from itertools import count
 from pprint import pprint
 from time import time
+import tracemalloc
 from typing import List, Tuple
 
 import numpy as np
+from memory import log_memory
 from node import INode
 
 
@@ -17,7 +19,8 @@ class AStarSearcher:
         self.open_list_cost: dict[int, INode] = {
             init_node.unique_key(): init_node.cost()}
 
-    def search(self) -> Tuple[int, INode]:
+    def search(self) -> Tuple[int, int, INode]:
+        tracemalloc.start()
         count = 0
         print('次の初期設定からスタートします')
         self.init_node.print_status()
@@ -32,7 +35,9 @@ class AStarSearcher:
             min_node = self.open_list[open_list_cost_key[min_index]]
             if min_node.goal_check():
                 print(f'{count}回目に見つかりました')
-                return (count, min_node)
+                memory = log_memory()
+                print(f'使用メモリ: {memory}')
+                return (memory, count, min_node)
             self.open_remove(min_node)
 
             # step3: ノードを展開して子ノードの集合を作る。min_nodeをCLOSEDリストに追加する。

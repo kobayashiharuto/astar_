@@ -1,7 +1,9 @@
 from itertools import count
 from pprint import pprint
 from time import time
+import tracemalloc
 from typing import List, Tuple
+from memory import log_memory
 from node import INode
 from collections import OrderedDict
 
@@ -11,7 +13,8 @@ class IterativeDeepningSearcher:
         # step1: 出発のノードをOpenリストに追加
         self.init_node = init_node
 
-    def search(self) -> Tuple[int, INode]:
+    def search(self) -> Tuple[int, int, INode]:
+        tracemalloc.start()
         count = 0
         depth_limit = 1
         print('\n次の初期設定からスタートします: ')
@@ -21,7 +24,9 @@ class IterativeDeepningSearcher:
             (count_, target_node_child) = self.limit_search(depth_limit)
             count += count_
             if target_node_child != None:
-                return (count, target_node_child)
+                memory = log_memory()
+                print(f'使用メモリ: {memory}')
+                return (memory, count, target_node_child)
             else:
                 depth_limit += 1
 

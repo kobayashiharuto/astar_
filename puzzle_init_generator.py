@@ -1,6 +1,7 @@
 from copy import deepcopy
 from pprint import pprint
 import random
+import tracemalloc
 from turtle import distance
 from typing import List
 import numpy as np
